@@ -7,16 +7,15 @@ set_time_limit(0);
 require 'PHPWebSocket.php';
 
 // when a client sends data to the server
-function wsOnMessage($clientID,$message,$messageLength,$binary)
+function wsOnMessage($clientID, $message, $messageLength, $binary)
 {
 	global $Server;
 	$ip = long2ip($Server->wsClients[$clientID][6]);
-
 	try
 	{
 		$realmessage = json_decode(base64_decode($message));
 	}
-	catch(Exception $ex)
+	catch (Exception $ex)
 	{
 		echo 'Exception: ' . $ex->getMessage();
 		$Server->wsClose($clientID);
@@ -24,25 +23,25 @@ function wsOnMessage($clientID,$message,$messageLength,$binary)
 	}
 
 	// check if message length is 0
-	if($messageLength == 0)
+	if ($messageLength == 0)
 	{
 		$Server->wsClose($clientID);
 		return;
 	}
 
 	//The speaker is the only person in the room. Don't let them feel lonely.
-	if(sizeof($Server->wsClients) == 1)
+	if (sizeof($Server->wsClients) == 1)
 	{
-		$Server->wsSend($clientID,"There isn't anyone else in the room, but I'll still listen to you. --Your Trusty Server");
+		$Server->wsSend($clientID, "There isn't anyone else in the room, but I'll still listen to you. --Your Trusty Server");
 	}
 	else
 	//Send the message to everyone but the person who said it
 	{
-		foreach($Server->wsClients as $id => $client)
+		foreach ($Server->wsClients as $id => $client)
 		{
-			if($id != $clientID)
+			if ($id != $clientID)
 			{
-				$Server->wsSend($id,"Visitor " . $realmessage->token . ' said: ' . $realmessage->value);
+				$Server->wsSend($id, "Visitor " . $realmessage->token . ' said: ' . $realmessage->message);
 			}
 		}
 	}
@@ -52,23 +51,24 @@ function wsOnMessage($clientID,$message,$messageLength,$binary)
 function wsOnOpen($clientID)
 {
 	global $Server;
-	print_r($clientID);
-	$ip = long2ip($Server->wsClients[$clientID][6]);
+	$Server->log('Klient się połączył');
 
+	$ip = long2ip($Server->wsClients[$clientID][6]);
+	
 	$Server->log("$ip ($clientID) has connected.");
 
 	//Send a join notice to everyone but the person who joined
-	foreach($Server->wsClients as $id => $client)
+	foreach ($Server->wsClients as $id => $client)
 	{
-		if($id != $clientID)
+		if ($id != $clientID)
 		{
-			$Server->wsSend($id,"Visitor $clientID ($ip) has joined the room.");
+			$Server->wsSend($id, "Visitor $clientID ($ip) has joined the room.");
 		}
 	}
 }
 
 // when a client closes or lost connection
-function wsOnClose($clientID,$status)
+function wsOnClose($clientID, $status)
 {
 	global $Server;
 	$ip = long2ip($Server->wsClients[$clientID][6]);
@@ -76,17 +76,17 @@ function wsOnClose($clientID,$status)
 	$Server->log("$ip ($clientID) has disconnected.");
 
 	//Send a user left notice to everyone in the room
-	foreach($Server->wsClients as $id => $client)
+	foreach ($Server->wsClients as $id => $client)
 	{
-		$Server->wsSend($id,"Visitor $clientID ($ip) has left the room.");
+		$Server->wsSend($id, "Visitor $clientID ($ip) has left the room.");
 	}
 }
 
 // start the server
 $Server = new PHPWebSocket();
-$Server->bind('message','wsOnMessage');
-$Server->bind('open','wsOnOpen');
-$Server->bind('close','wsOnClose');
+$Server->bind('message', 'wsOnMessage');
+$Server->bind('open', 'wsOnOpen');
+$Server->bind('close', 'wsOnClose');
 // for other computers to connect, you will probably need to change this to your LAN IP or external IP,
 // alternatively use: gethostbyaddr(gethostbyname($_SERVER['SERVER_NAME']))
-$Server->wsStartServer('127.0.0.1',9300);
+$Server->wsStartServer('127.0.0.1', 9300);
